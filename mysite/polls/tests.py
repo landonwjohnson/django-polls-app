@@ -3,7 +3,13 @@ from django.utils import timezone
 from django.urls import reverse
 import datetime
 from .models import Question
-
+# ================================================================================================================================ short test summary info ================================================================================================================================
+# FAILED polls/tests.py::QuestionDetailViewTests::test_future_question - NameError: name 'Questions' is not defined
+# FAILED polls/tests.py::QuestionModelTests::test_future_question - django.urls.exceptions.NoReverseMatch: Reverse for 'detail' with arguments '('',)' not found. 1 pattern(s) tried: ['polls/(?P<pk>[0-9]+)/\\Z']
+# FAILED polls/tests.py::QuestionModelTests::test_future_question_and_past_question - django.urls.exceptions.NoReverseMatch: Reverse for 'detail' with arguments '('',)' not found. 1 pattern(s) tried: ['polls/(?P<pk>[0-9]+)/\\Z']
+# FAILED polls/tests.py::QuestionModelTests::test_no_questions - django.urls.exceptions.NoReverseMatch: Reverse for 'detail' with arguments '('',)' not found. 1 pattern(s) tried: ['polls/(?P<pk>[0-9]+)/\\Z']
+# FAILED polls/tests.py::QuestionModelTests::test_past_question - django.urls.exceptions.NoReverseMatch: Reverse for 'detail' with arguments '('',)' not found. 1 pattern(s) tried: ['polls/(?P<pk>[0-9]+)/\\Z']
+# FAILED polls/tests.py::QuestionModelTests::test_two_past_questions - django.urls.exceptions.NoReverseMatch: Reverse for 'detail' with arguments '('',)' not found. 1 pattern(s) tried: ['polls/(?P<pk>[0-9]+)/\\Z']
 def create_question(question_text, days):
     """
     Create a question with the given `question_text` and published the
@@ -15,15 +21,16 @@ def create_question(question_text, days):
 
 
 class QuestionDetailViewTests(TestCase):
-    def test_future_question:
+    def test_future_question(self):
         """
         The detail view of a question with a pub_date in the future
         returns a 404 not found.
         """
         future_question = create_question(question_text="Future question.", days=5)
-        url = reverse("polls:detail", args=(future_question.id))
+        url = reverse("polls:detail", args=(future_question.id,))
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
+
 
 class QuestionModelTests(TestCase):
     def test_no_questions(self):
