@@ -4,8 +4,10 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views import generic
-
+from rest_framework import viewsets
+from rest_framework.pagination import PageNumberPagination
 from .models import Choice, Question
+from .serializers import QuestionSerializer, ChoiceSerializer
 
 class IndexView(generic.ListView):
     template_name = "polls/index.html"
@@ -64,3 +66,23 @@ def vote(request, question_id):
         # with POST data. This prevents data from being posted twice if a
         # user hits the Back button.
         return HttpResponseRedirect(reverse("polls:results", args=(question.id,)))
+
+class QuestionPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+class ChoicePagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+class QuestionViewSet(viewsets.ModelViewSet):
+    queryset = Question.objects.all()
+    serializer_class = QuestionSerializer
+    pagination_class = QuestionPagination
+
+class ChoiceViewSet(viewsets.ModelViewSet):
+    queryset = Choice.objects.all()
+    serializer_class = ChoiceSerializer
+    pagination_class = ChoicePagination

@@ -2,14 +2,12 @@ from django.test import TestCase
 from django.utils import timezone
 from django.urls import reverse
 import datetime
-from .models import Question
-# ================================================================================================================================ short test summary info ================================================================================================================================
-# FAILED polls/tests.py::QuestionDetailViewTests::test_future_question - NameError: name 'Questions' is not defined
-# FAILED polls/tests.py::QuestionModelTests::test_future_question - django.urls.exceptions.NoReverseMatch: Reverse for 'detail' with arguments '('',)' not found. 1 pattern(s) tried: ['polls/(?P<pk>[0-9]+)/\\Z']
-# FAILED polls/tests.py::QuestionModelTests::test_future_question_and_past_question - django.urls.exceptions.NoReverseMatch: Reverse for 'detail' with arguments '('',)' not found. 1 pattern(s) tried: ['polls/(?P<pk>[0-9]+)/\\Z']
-# FAILED polls/tests.py::QuestionModelTests::test_no_questions - django.urls.exceptions.NoReverseMatch: Reverse for 'detail' with arguments '('',)' not found. 1 pattern(s) tried: ['polls/(?P<pk>[0-9]+)/\\Z']
-# FAILED polls/tests.py::QuestionModelTests::test_past_question - django.urls.exceptions.NoReverseMatch: Reverse for 'detail' with arguments '('',)' not found. 1 pattern(s) tried: ['polls/(?P<pk>[0-9]+)/\\Z']
-# FAILED polls/tests.py::QuestionModelTests::test_two_past_questions - django.urls.exceptions.NoReverseMatch: Reverse for 'detail' with arguments '('',)' not found. 1 pattern(s) tried: ['polls/(?P<pk>[0-9]+)/\\Z']
+from .models import Question, Choice
+from rest_framework import status
+from rest_framework.test import APITestCase, APIClient
+from .serializers import QuestionSerializer, ChoiceSerializer
+
+
 def create_question(question_text, days):
     """
     Create a question with the given `question_text` and published the
@@ -115,3 +113,98 @@ class QuestionModelTests(TestCase):
         time = timezone.now() + datetime.timedelta(days=1)
         future_question = Question(pub_date=time)
         self.assertIs(future_question.was_published_recently(), False)
+
+
+class QuestionAPITestCase(APITestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.question_data = {
+            'question_text': 'What is your favorite color?',
+            'pub_date': timezone.now()
+        }
+        self.question = Question.objects.create(**self.question_data)
+        self.choice_data = {
+            'question': self.question,
+            'choice_text': 'Blue',
+            'votes': 0
+        }
+        self.choice = Choice.objects.create(**self.choice_data)
+
+    def test_create_question(self):
+        url = reverse('polls:question-list')
+        response = self.client.post(url, self.question_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Question.objects.count(), 2)  # One created in setUp and one in test
+
+    def test_read_question(self):
+        url = reverse('polls:question-detail', args=[self.question.id])
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, QuestionSerializer(self.question).data)
+
+    def test_update_question(self):
+        url = reverse('polls:question-detail', args=[self.question.id])
+        updated_data = {
+            'question_text': 'What is your favorite animal?',
+            'pub_date': timezone.now()
+        }
+        response = self.client.put(url, updated_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.question.refresh_from_db()
+        self.assertEqual(self.question.question_text, updated_data['question_text'])
+
+    def test_delete_question(self):
+        url = reverse('polls:question-detail', args=[self.question.id])
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Question.objects.count(), 0)
+
+
+class ChoiceAPITestCase(APITestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.question = Question.objects.create(
+            question_text='What is your favorite color?',
+            pub_date=timezone.now()
+        )
+        self.choice_data = {
+            'question': self.question.id,
+            'choice_text': 'Blue',
+            'votes': 0
+        }
+        self.choice = Choice.objects.create(
+            question=self.question,
+            choice_text='Blue',
+            votes=0
+        )
+
+    def test_create_choice(self):
+        url = reverse('polls:choice-list')
+        response = self.client.post(url, self.choice_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Choice.objects.count(), 2)  # One created in setUp and one in test
+
+    def test_read_choice(self):
+        url = reverse('polls:choice-detail', args=[self.choice.id])
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, ChoiceSerializer(self.choice).data)
+
+    def test_update_choice(self):
+        url = reverse('polls:choice-detail', args=[self.choice.id])
+        updated_data = {
+            'question': self.question.id,
+            'choice_text': 'Green',
+            'votes': 1
+        }
+        response = self.client.put(url, updated_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.choice.refresh_from_db()
+        self.assertEqual(self.choice.choice_text, updated_data['choice_text'])
+        self.assertEqual(self.choice.votes, updated_data['votes'])
+
+    def test_delete_choice(self):
+        url = reverse('polls:choice-detail', args=[self.choice.id])
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Choice.objects.count(), 0)
