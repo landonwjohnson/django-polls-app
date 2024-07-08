@@ -6,17 +6,24 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
     - uses: actions/checkout@v3  # Update to the latest version
+
     - name: Set up Python
       uses: actions/setup-python@v4  # Update to the latest version
       with:
         python-version: '3.x'
+
+    - name: Navigate to the project directory
+      run: cd mysite
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install -r mysite/requirements.txt
         pip install pytest pytest-django
+
     - name: Run tests
       run: |
         pytest
