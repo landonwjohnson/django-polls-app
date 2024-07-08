@@ -1,5 +1,7 @@
 
 
+
+
 ## Running the Project
 
 ### macOS or Linux
@@ -200,3 +202,5 @@ In simpler terms:
 - A single building (app) can be part of many different towns (projects).
 
 This way of organizing things is used in Django, NestJS, Express (Node.js), Laravel, and Flask, even though the names and details might be a bit different.
+
+
