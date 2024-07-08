@@ -35,7 +35,6 @@ REST_FRAMEWORK = {
 
 INSTALLED_APPS = [
         'jobs.apps.JobsConfig',  # Adjust based on your app's name and structure
-
     'rest_framework',
     'polls.apps.PollsConfig',
     'django.contrib.admin',

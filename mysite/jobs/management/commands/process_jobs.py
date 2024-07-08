@@ -2,32 +2,25 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from django.utils import timezone
-from jobs.models import Job  # Adjust the import based on your app structure
-
-def process_jobs():
-    now = timezone.now()
-    jobs = Job.objects.filter(available_at__lte=now, reserved_at__isnull=True)
-    
-    for job in jobs:
-        process_job(job)
-
-def process_job(job):
-    # Mark job as reserved
-    job.reserved_aa# scheduler.py
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
-from django.utils import timezone
 from jobs.models import Job
 from jobs.tasks import ALLOWED_TASKS
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 def process_jobs():
     now = timezone.now()
-    jobs = Job.objects.filter(available_at__lte=now, reserved_at__isnull=True).order_by('available_at')
-    
+    batch_size = 10  # Define the size of the batch to process at a time
+    jobs = Job.objects.filter(available_at__lte=now, reserved_at__isnull=True).order_by('available_at')[:batch_size]
+
+    if not jobs.exists():
+        logger.info("All jobs have been completed.")
+        return
+
     for job in jobs:
+        time.sleep(job.delay)  # Consider replacing this with a non-blocking delay if possible
         process_job(job)
-        time.sleep(300)  # Wait for 5 minutes before processing the next job
 
 def process_job(job):
     # Mark job as reserved
@@ -56,42 +49,17 @@ def process_job(job):
         job.attempts += 1
         job.reserved_at = None
         job.save()
-        print(f'Failed to process job {job.id}: {str(e)}')
+        logger.error(f'Failed to process job {job.id}: {str(e)}')
 
 def start():
     scheduler = BackgroundScheduler()
 
-    # Schedule the job function to be called every minute
-    scheduler.add_job(process_jobs, CronTrigger(minute='*'), id="process_jobs", replace_existing=True)
+    # Schedule the job function to be called every other hour
+    scheduler.add_job(process_jobs, CronTrigger(minute=0, hour='*/2'), id="process_jobs", replace_existing=True)
 
     scheduler.start()
-    print("Scheduler started...")
- = timezone.now()
-    job.save()
+    logger.info("Scheduler started...")
 
-    try:
-        # Process the job
-        # Deserialize the payload and perform the task
-        payload = job.payload
-        # (Add your job processing logic here)
-        print(f'Processing job {job.id} with payload: {payload}')
-        
-        # Mark job as completed (delete or archive)
-        job.delete()
-    except Exception as e:
-        # Handle exceptions (logging, retry logic, etc.)
-        job.attempts += 1
-        job.reserved_at = None
-        job.save()
-        print(f'Failed to process job {job.id}: {str(e)}')
-
-def start():
-    scheduler = BackgroundScheduler()
-    scheduler.add_jobstore(DjangoJobStore(), "default")
-
-    # Schedule the job function to be called every night at midnight
-    scheduler.add_job(process_jobs, CronTrigger(hour=0, minute=0), id="process_jobs", replace_existing=True)
-    
-    register_events(scheduler)
-    scheduler.start()
-    print("Scheduler started...")
+# Ensure you start the scheduler when the Django app starts
+if __name__ == "__main__":
+    start()

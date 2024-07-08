@@ -48,6 +48,16 @@ python manage.py runserver
 python manage.py migrate
 ```
 
+### Seeding Jobs to test them out
+```bash
+# If you see a message like this:
+# You have 18 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): admin, auth, contenttypes, sessions.
+
+# Simply run this command to apply the migrations
+python manage.py migrate
+```
+
+
 ---
 
 ## Landon's Django Notes
